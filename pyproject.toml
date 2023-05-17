@@ -1,0 +1,18 @@
+[tool.poetry]
+name = "capstone"
+version = "0.1.0"
+description = "Resnet34 CNN implementation for classification of brain tumors vs healthy controls."
+authors = ["Maxwell Thorpe"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.9"
+torch = "^2.0.0"
+torchvision = "^0.15.1"
+pandas = "^2.0.1"
+difpy = "^3.0.10"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
