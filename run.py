@@ -11,6 +11,7 @@ from source.model_train import (
     compute_accuracy,
     compute_confusion_matrix,
 )
+from source.model_evaluation import create_test_score_list, create_roc_calc_auc, plot_roc_auc
 
 
 log.getLogger(__name__)
@@ -111,3 +112,10 @@ mat = compute_confusion_matrix(trained_model, test_loader, DEVICE)
 print(mat)
 
 torch.save(model.state_dict(), "/home/thorpe/Git/Capstone/model.pt")
+
+
+
+y_test, y_score = create_test_score_list(model, test_loader)
+fpr, tpr, thresholds, roc_auc = create_roc_calc_auc(y_test, y_score)
+roc_plt = plot_roc_auc(fpr, tpr, thresholds, roc_auc)
+roc_plt.show()
