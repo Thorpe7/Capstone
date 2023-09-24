@@ -60,16 +60,15 @@ class ResNet(
         self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
 
         # Call Resnet Blocks
-        self.layer1 = self._make_layer(Block, layers[0], out_channels = 64, stride = 1)
-        self.layer2 = self._make_layer(Block, layers[1], out_channels = 128, stride = 2)
-        self.layer3 = self._make_layer(Block, layers[2], out_channels = 256, stride = 2)
-        self.layer4 = self._make_layer(Block, layers[3], out_channels = 512, stride = 2)
+        self.layer1 = self._make_layer(Block, layers[0], out_channels=64, stride=1)
+        self.layer2 = self._make_layer(Block, layers[1], out_channels=128, stride=2)
+        self.layer3 = self._make_layer(Block, layers[2], out_channels=256, stride=2)
+        self.layer4 = self._make_layer(Block, layers[3], out_channels=512, stride=2)
 
-        self.avgpool = nn.AdaptiveAvgPool2d((1,1))
-        self.fc = nn.Linear(512*4, num_classes)
+        self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
+        self.fc = nn.Linear(512 * 4, num_classes)
 
     def forward(self, x):
-
         x = self.conv1(x)
         x = self.bn1(x)
         x = self.relu(x)
@@ -86,28 +85,32 @@ class ResNet(
 
         return x
 
-
     def _make_layer(self, Block, num_residual_blocks, out_channels, stride):
         identity_downsample = None
         layers = []
 
         # When is identity layer needed
-        if stride != 1 or self.in_channels != out_channels*4:
+        if stride != 1 or self.in_channels != out_channels * 4:
             identity_downsample = nn.Sequential(
                 nn.Conv2d(
-                self.in_channels, out_channels*4, kernel_size=1, stride=stride
-                ), 
-                nn.BatchNorm2d(out_channels*4)
-                )
-        # This is the layer that changes the number of channels    
-        layers.append(Block(self.in_channels, out_channels, identity_downsample, stride))
-        self.in_channels = out_channels*4 #  64 * 4 = 256
+                    self.in_channels, out_channels * 4, kernel_size=1, stride=stride
+                ),
+                nn.BatchNorm2d(out_channels * 4),
+            )
+        # This is the layer that changes the number of channels
+        layers.append(
+            Block(self.in_channels, out_channels, identity_downsample, stride)
+        )
+        self.in_channels = out_channels * 4  #  64 * 4 = 256
 
-        for i in range(num_residual_blocks -1 ):
-            layers.append(Block(self.in_channels,out_channels)) # input 256 -> 64, 64*4 (256) again
-        
+        for i in range(num_residual_blocks - 1):
+            layers.append(
+                Block(self.in_channels, out_channels)
+            )  # input 256 -> 64, 64*4 (256) again
+
         # Returns unpacked list
         return nn.Sequential(*layers)
+
 
 # def ResNet50(img_channels=3, num_classes=4):
 #     return ResNet(Block, [3,4,6,3], img_channels, num_classes)\
@@ -120,5 +123,3 @@ class ResNet(
 
 
 # Training
-
-

@@ -14,6 +14,6 @@ def search_dups(dir_name: str, filename: str) -> None:
 
 
 if __name__ == "__main__":
-    dir_input  = input("Enter directory path: ")
+    dir_input = input("Enter directory path: ")
     user_input = input("Enter file name to use including extension: ")
     search_dups(dir_input, user_input)

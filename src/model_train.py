@@ -9,23 +9,23 @@ import logging as log
 log.basicConfig(level=log.INFO)
 log = log.getLogger(__name__)
 
-def train_model(model, train_loader, valid_loader, num_epochs, batch_size, learning_rate, device):
+
+def train_model(
+    model, train_loader, valid_loader, num_epochs, batch_size, learning_rate, device
+):
     log.info("Model training started...")
     model = model.to(device)
     loss_function = nn.CrossEntropyLoss()
-    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate) # , momentum=0.9
+    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)  # , momentum=0.9
 
-
-    
     n_total_steps = len(train_loader)
     for epoch in range(num_epochs):
         model.train()
 
         for batch_idx, (features, labels) in enumerate(train_loader):
-
             features = features.to(device)
             labels = labels.to(device)
-    
+
             # Forward
             logits = model(features)
             loss = loss_function(logits, labels)
@@ -41,17 +41,17 @@ def train_model(model, train_loader, valid_loader, num_epochs, batch_size, learn
                 log.info(
                     f"Epoch [{epoch+1}/{num_epochs}], Step [{batch_idx+1}/{n_total_steps}], Loss: {loss.item():.4f}"
                 )
-        
+
         model.eval()
-        with torch.no_grad(): 
-            train_acc = compute_accuracy(model, train_loader, device, 'Training')
-            valid_acc = compute_accuracy(model, valid_loader, device, 'Validation')
-           
+        with torch.no_grad():
+            train_acc = compute_accuracy(model, train_loader, device, "Training")
+            valid_acc = compute_accuracy(model, valid_loader, device, "Validation")
+
     log.info("Training Completed...")
     return model
 
-def test_model(test_loader, device, model,batch_size, classes):
 
+def test_model(test_loader, device, model, batch_size, classes):
     model = model.to(device)
     with torch.no_grad():
         n_correct = 0
@@ -64,32 +64,30 @@ def test_model(test_loader, device, model,batch_size, classes):
             outputs = model(images)
 
             # max returns
-            _, predicted = torch.max(outputs,1)
+            _, predicted = torch.max(outputs, 1)
             n_samples += labels.size(0)
             n_correct += (predicted == labels).sum().item()
-            
+
             for i in range(batch_size):
                 label = labels[i]
                 pred = predicted[i]
-                if (label == pred):
+                if label == pred:
                     n_class_correct[label] += 1
                 n_class_samples[label] += 1
-            
+
         acc = 100.0 * n_correct / n_samples
-        log.info(f'Accuracy of the network: {acc} %')
+        log.info(f"Accuracy of the network: {acc} %")
 
         for i in range(2):
             acc = 100.0 * n_class_correct[i] / n_class_samples[i]
-            log.info(f'Accuracy of {classes[i]}: {acc} %')
+            log.info(f"Accuracy of {classes[i]}: {acc} %")
+
 
 def compute_accuracy(model, data_loader, device, acc_type):
-    
     with torch.no_grad():
-
         correct_pred, num_examples = 0, 0
 
         for i, (features, targets) in enumerate(data_loader):
-
             features = features.to(device)
             targets = targets.float().to(device)
 
@@ -100,24 +98,22 @@ def compute_accuracy(model, data_loader, device, acc_type):
             correct_pred += (predicted_labels == targets).sum()
     log.info(f"{acc_type} Accuracy: {correct_pred.float()/num_examples * 100}")
 
-def compute_confusion_matrix(model, data_loader, device):
 
+def compute_confusion_matrix(model, data_loader, device):
     all_targets, all_predictions = [], []
     with torch.no_grad():
-
         for i, (features, targets) in enumerate(data_loader):
-
             features = features.to(device)
             targets = targets
             logits = model(features)
             _, predicted_labels = torch.max(logits, 1)
-            all_targets.extend(targets.to('cpu'))
-            all_predictions.extend(predicted_labels.to('cpu'))
+            all_targets.extend(targets.to("cpu"))
+            all_predictions.extend(predicted_labels.to("cpu"))
 
     all_predictions = all_predictions
     all_predictions = np.array(all_predictions)
     all_targets = np.array(all_targets)
-        
+
     class_labels = np.unique(np.concatenate((all_targets, all_predictions)))
     if class_labels.shape[0] == 1:
         if class_labels[0] != 0:
