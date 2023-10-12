@@ -1,3 +1,4 @@
-DEV_NOTES.txt
+docs/dev_notes.md
 data/
 results/
+pylintrc
