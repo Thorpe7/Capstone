@@ -8,7 +8,7 @@ from typing import Tuple
 from numpy import ndarray
 from sklearn.metrics import roc_curve, auc
 from torch.utils.data import DataLoader
-from src.resnet34_arch import ResNet
+from src.resnet50_arch import ResNet
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 

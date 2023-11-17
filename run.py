@@ -5,11 +5,13 @@ import torch
 from torchvision import transforms
 from src.dataset_formatting import curate_torch_csv
 from src.dataloader import custom_dataloader
-from src.resnet34_arch import ResNet, Block
+from src.resnet50_arch import ResNet, Block
 from src.model_train import (
     train_model,
+    test_model,
     compute_accuracy,
     compute_confusion_matrix,
+    plot_accuracy_per_iter,
 )
 from src.model_evaluation import (
     create_test_score_list,
@@ -28,7 +30,7 @@ log.info(f"{torch.cuda.get_device_name()}...")
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # Hyper parameters
-NUM_EPOCHS = 1
+NUM_EPOCHS = 2
 BATCH_SIZE = 128
 LEARNING_RATE = 0.0001
 classes = ("glial", "mengi", "none", "pituitary")
@@ -45,10 +47,6 @@ if Path("data/v1/Testing/*.csv").exists():
 else:
     curate_torch_csv(Path("data/v1/Testing"), testing=True)
     log.info(f"{Path('data/v1/Testing/Testing.csv')} created...")
-
-# Find smallest img dimesions in dataset
-# dim_size = find_smallest_img_dim(path_to_dir=Path("data/"))
-# log.info(f"Min image dims found: {dim_size}...")
 
 
 # Create transform for images
@@ -94,19 +92,22 @@ log.info(f"Test Label dimension found: {label.shape}...")
 
 # Attempt different model sizes
 # Resnet18, smaller model should generalize better
-model = ResNet(Block, [2, 2, 2, 2], image_channels=1, num_classes=4).to(DEVICE)
+# model = ResNet(Block, [2, 2, 2, 2], image_channels=1, num_classes=4).to(DEVICE)
 
 # Resnet50, original model size
-# model = ResNet(Block, [3, 4, 6, 3], image_channels=1, num_classes=4).to(DEVICE)
+model = ResNet(Block, [3, 4, 6, 3], image_channels=1, num_classes=4).to(DEVICE)
 
 # Resnet101
 # model = ResNet(Block, [3, 4, 23, 3], image_channels=1, num_classes=4).to(DEVICE)
 
-trained_model = train_model(
+trained_model, epoch_list, train_acc, valid_acc = train_model(
     model, train_loader, valid_loader, NUM_EPOCHS, BATCH_SIZE, LEARNING_RATE, DEVICE
 )
 
-# test_model(test_loader, DEVICE, model,BATCH_SIZE, classes)
+print(epoch_list, len(epoch_list))
+print(train_acc, len(train_acc))
+plot_accuracy_per_iter(epoch_list, train_acc, "Training Accuracy")
+test_model(test_loader, DEVICE, trained_model, BATCH_SIZE, classes)
 
 compute_accuracy(trained_model, train_loader, DEVICE, "Training")
 mat = compute_confusion_matrix(trained_model, train_loader, DEVICE)

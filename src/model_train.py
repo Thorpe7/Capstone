@@ -4,6 +4,7 @@ import torch.nn.functional as F
 import numpy as np
 from itertools import product
 import logging as log
+import matplotlib.pyplot as plt
 
 log.basicConfig(level=log.INFO)
 log = log.getLogger(__name__)
@@ -18,6 +19,9 @@ def train_model(
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)  # , momentum=0.9
 
     n_total_steps = len(train_loader)
+    epoch_num = []
+    train_acc_list = []
+    valid_acc_list = []
     for epoch in range(num_epochs):
         model.train()
 
@@ -45,9 +49,12 @@ def train_model(
         with torch.no_grad():
             train_acc = compute_accuracy(model, train_loader, device, "Training")
             valid_acc = compute_accuracy(model, valid_loader, device, "Validation")
+            epoch_num.append(epoch + 1)
+            train_acc_list.append(train_acc)
+            valid_acc_list.append(valid_acc)
 
     log.info("Training Completed...")
-    return model
+    return model, epoch_num, train_acc_list, valid_acc_list
 
 
 def test_model(test_loader, device, model, batch_size, classes):
@@ -55,8 +62,8 @@ def test_model(test_loader, device, model, batch_size, classes):
     with torch.no_grad():
         n_correct = 0
         n_samples = 0
-        n_class_correct = [0 for i in range(2)]
-        n_class_samples = [0 for i in range(2)]
+        n_class_correct = [0 for i in range(4)]
+        n_class_samples = [0 for i in range(4)]
         for images, labels in test_loader:
             images = images.to(device)
             labels = labels.to(device)
@@ -67,7 +74,7 @@ def test_model(test_loader, device, model, batch_size, classes):
             n_samples += labels.size(0)
             n_correct += (predicted == labels).sum().item()
 
-            for i in range(batch_size):
+            for i in range(images.size(0)):
                 label = labels[i]
                 pred = predicted[i]
                 if label == pred:
@@ -77,7 +84,7 @@ def test_model(test_loader, device, model, batch_size, classes):
         acc = 100.0 * n_correct / n_samples
         log.info(f"Accuracy of the network: {acc} %")
 
-        for i in range(2):
+        for i in range(4):
             acc = 100.0 * n_class_correct[i] / n_class_samples[i]
             log.info(f"Accuracy of {classes[i]}: {acc} %")
 
@@ -96,6 +103,8 @@ def compute_accuracy(model, data_loader, device, acc_type):
             num_examples += targets.size(0)
             correct_pred += (predicted_labels == targets).sum()
     log.info(f"{acc_type} Accuracy: {correct_pred.float()/num_examples * 100}")
+    computed_accuracy = correct_pred.float() / num_examples * 100
+    return round(computed_accuracy.item(), 2)
 
 
 def compute_confusion_matrix(model, data_loader, device):
@@ -130,3 +139,12 @@ def compute_confusion_matrix(model, data_loader, device):
     print("all predictions")
     print(all_predictions)
     return mat
+
+
+def plot_accuracy_per_iter(epoch_num: list, accuracy_list: list, name_label: str):
+    plt.plot(epoch_num, accuracy_list, label=name_label)
+    plt.xlabel("Epoch")
+    plt.ylabel("Accuracy")
+    plt.title("Accuracy Over Time")
+    plt.legend()
+    plt.show()

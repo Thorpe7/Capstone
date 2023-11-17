@@ -1,7 +1,7 @@
 """ Have the model predict on an image """
 import torch
 from torchvision import transforms
-from resnet34_arch import ResNet, Block
+from src.resnet50_arch import ResNet, Block
 from PIL import Image
 from pathlib import Path
 
