@@ -50,9 +50,13 @@ class Block(nn.Module):
 
 class ResNet(
     nn.Module
-):  # layers = how many time we will implement above block [list] e.g. [3,4,6,3]
-    def __init__(self, Block, layers, image_channels, num_classes):
+):  # num_layers = how many time we will implement above block [list] e.g. [3,4,6,3] Resnet50
+    def __init__(
+        self, Block: nn.Module, num_layers: list, image_channels: int, num_classes: int
+    ):
         super(ResNet, self).__init__()
+
+        # First conv layer
         self.in_channels = 64
         self.conv1 = nn.Conv2d(image_channels, 64, kernel_size=7, stride=2, padding=3)
         self.bn1 = nn.BatchNorm2d(64)
@@ -60,24 +64,34 @@ class ResNet(
         self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
 
         # Call Resnet Blocks
-        self.layer1 = self._make_layer(Block, layers[0], out_channels=64, stride=1)
-        self.layer2 = self._make_layer(Block, layers[1], out_channels=128, stride=2)
-        self.layer3 = self._make_layer(Block, layers[2], out_channels=256, stride=2)
-        self.layer4 = self._make_layer(Block, layers[3], out_channels=512, stride=2)
+        self.layer2 = self._make_layer(
+            Block, num_layers[0], out_channels=64, stride=1
+        )  # 3 layers
+        self.layer3 = self._make_layer(
+            Block, num_layers[1], out_channels=128, stride=2
+        )  # 4 layers
+        self.layer4 = self._make_layer(
+            Block, num_layers[2], out_channels=256, stride=2
+        )  # 6 layers
+        self.layer5 = self._make_layer(
+            Block, num_layers[3], out_channels=512, stride=2
+        )  # 3 layers
 
         self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
         self.fc = nn.Linear(512 * 4, num_classes)
 
     def forward(self, x):
+        # layer 1
         x = self.conv1(x)
         x = self.bn1(x)
         x = self.relu(x)
         x = self.maxpool(x)
 
-        x = self.layer1(x)
+        # layers 2-5
         x = self.layer2(x)
         x = self.layer3(x)
         x = self.layer4(x)
+        x = self.layer5(x)
 
         x = self.avgpool(x)
         x = x.reshape(x.shape[0], -1)
@@ -120,6 +134,3 @@ class ResNet(
 
 # def ResNet152(img_channels=3, num_classes=4):
 #     return ResNet(Block, [3,4,36,3], img_channels, num_classes)
-
-
-# Training
