@@ -6,6 +6,7 @@ from torchvision import transforms
 from src.dataset_formatting import curate_torch_csv
 from src.dataloader import custom_dataloader
 from src.resnet50_arch import ResNet, Block
+from src.plain_cnn import PlainCNN, CNNBlock
 from src.model_train import (
     train_model,
     test_model,
@@ -30,7 +31,7 @@ log.info(f"{torch.cuda.get_device_name()}...")
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # Hyper parameters
-NUM_EPOCHS = 2
+NUM_EPOCHS = 1
 BATCH_SIZE = 128
 LEARNING_RATE = 0.0001
 classes = ("glial", "mengi", "none", "pituitary")
@@ -95,10 +96,13 @@ log.info(f"Test Label dimension found: {label.shape}...")
 # model = ResNet(Block, [2, 2, 2, 2], image_channels=1, num_classes=4).to(DEVICE)
 
 # Resnet50, original model size
-model = ResNet(Block, [3, 4, 6, 3], image_channels=1, num_classes=4).to(DEVICE)
+# model = ResNet(Block, [3, 4, 6, 3], image_channels=1, num_classes=4).to(DEVICE)
 
 # Resnet101
 # model = ResNet(Block, [3, 4, 23, 3], image_channels=1, num_classes=4).to(DEVICE)
+
+# Tradition CNN
+model = PlainCNN(CNNBlock, [6, 8, 12, 6], image_channels=1, num_classes=4).to(DEVICE)
 
 trained_model, epoch_list, train_acc, valid_acc = train_model(
     model, train_loader, valid_loader, NUM_EPOCHS, BATCH_SIZE, LEARNING_RATE, DEVICE
