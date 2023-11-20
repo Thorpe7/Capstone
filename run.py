@@ -2,6 +2,7 @@
 import logging as log
 from pathlib import Path
 import torch
+import pandas as pd
 from torchvision import transforms
 from src.dataset_formatting import curate_torch_csv
 from src.dataloader import custom_dataloader
@@ -31,7 +32,7 @@ log.info(f"{torch.cuda.get_device_name()}...")
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # Hyper parameters
-NUM_EPOCHS = 1
+NUM_EPOCHS = 25
 BATCH_SIZE = 128
 LEARNING_RATE = 0.0001
 classes = ("glial", "mengi", "none", "pituitary")
@@ -92,17 +93,17 @@ log.info(f"Test Data dimension found: {image.shape}...")
 log.info(f"Test Label dimension found: {label.shape}...")
 
 # Attempt different model sizes
-# Resnet18, smaller model should generalize better
+### Resnet18, smaller model should generalize better
 # model = ResNet(Block, [2, 2, 2, 2], image_channels=1, num_classes=4).to(DEVICE)
 
-# Resnet50, original model size
-# model = ResNet(Block, [3, 4, 6, 3], image_channels=1, num_classes=4).to(DEVICE)
+### Resnet50, original model size
+model = ResNet(Block, [3, 4, 6, 3], image_channels=1, num_classes=4).to(DEVICE)
 
-# Resnet101
+### Resnet101
 # model = ResNet(Block, [3, 4, 23, 3], image_channels=1, num_classes=4).to(DEVICE)
 
-# Tradition CNN
-model = PlainCNN(CNNBlock, [6, 8, 12, 6], image_channels=1, num_classes=4).to(DEVICE)
+### Tradition CNN
+# model = PlainCNN(CNNBlock, [6, 8, 12, 6], image_channels=1, num_classes=4).to(DEVICE)
 
 trained_model, epoch_list, train_acc, valid_acc = train_model(
     model, train_loader, valid_loader, NUM_EPOCHS, BATCH_SIZE, LEARNING_RATE, DEVICE
@@ -111,6 +112,16 @@ trained_model, epoch_list, train_acc, valid_acc = train_model(
 print(epoch_list, len(epoch_list))
 print(train_acc, len(train_acc))
 plot_accuracy_per_iter(epoch_list, train_acc, "Training Accuracy")
+
+# Load model
+# trained_model = PlainCNN(CNNBlock, [6, 8, 12, 6], image_channels=1, num_classes=4)
+# trained_model.load_state_dict(
+#     torch.load(
+#         "/home/thorpe/git_repos/Capstone/results/saved_models/plain_cnn_model.pt"
+#     )
+# )
+trained_model.eval()
+
 test_model(test_loader, DEVICE, trained_model, BATCH_SIZE, classes)
 
 compute_accuracy(trained_model, train_loader, DEVICE, "Training")
@@ -125,10 +136,15 @@ compute_accuracy(trained_model, test_loader, DEVICE, "Testing")
 mat = compute_confusion_matrix(trained_model, test_loader, DEVICE)
 print(mat)
 
-torch.save(model.state_dict(), f"{Path.home()}/git_repos/Capstone/model.pt")
+confusion_df = pd.DataFrame(mat, index=classes, columns=classes)
+confusion_df.to_csv("results/confusion_matrices/resnet50_confusion_matrix.csv")
+
+torch.save(
+    model.state_dict(), f"{Path.home()}/git_repos/Capstone/resnet50_model_test.pt"
+)
 
 
-y_test, y_score = create_test_score_list(model, test_loader)
+y_test, y_score = create_test_score_list(trained_model, test_loader)
 fpr, tpr, thresholds, roc_auc = create_roc_calc_auc(y_test, y_score)
 roc_plt = plot_roc_auc(fpr, tpr, thresholds, roc_auc)
 roc_plt.show()
