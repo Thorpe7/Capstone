@@ -10,10 +10,11 @@ def get_file_count(dir_path: str):
             if x.is_file():
                 count += 1
             elif x.is_dir():
-                get_file_count(x)
-    print(count)
+                count += get_file_count(x)
+    return count
 
 
 if __name__ == "__main__":
     user_input = input("Provide file path here: ")
-    get_file_count(user_input)
+    total_count = get_file_count(user_input)
+    print(total_count)
