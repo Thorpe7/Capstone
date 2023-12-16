@@ -1,4 +1,7 @@
 docs/dev_notes.md
+docs/observations.md
 data/
 results/
 pylintrc
+src/eda/unorganized_stats/
+.vscode/

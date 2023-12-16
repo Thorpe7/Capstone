@@ -58,6 +58,10 @@ data_transform = transforms.Compose(
         transforms.Resize(size=(128, 128), antialias=True),
         transforms.RandomVerticalFlip(0.5),
         transforms.RandomHorizontalFlip(0.5),
+        transforms.RandomAffine(
+            degrees=45, translate=(0.1, 0.2), scale=(0.8, 1.2), shear=45
+        ),
+        transforms.RandomCropping(128, scale=(0.08, 1.0), ratio=(0.75, 1.33)),
         transforms.Grayscale(1),
         transforms.Normalize(mean=[0.5], std=[0.5]),
     ]
