@@ -6,8 +6,8 @@ import pandas as pd
 from torchvision import transforms
 from src.dataset_formatting import curate_torch_csv
 from src.dataloader import custom_dataloader
-from src.resnet50_arch import ResNet, Block
-from src.plain_cnn import PlainCNN, CNNBlock
+from src.dropout_models.resnet50_arch_w_dropout import ResNetwDropout, Block
+from src.dropout_models.plain_cnn_w_dropout import PlainCNNwDropout, CNNBlock
 from src.model_train import (
     train_model,
     test_model,
@@ -23,7 +23,6 @@ from src.model_evaluation import (
     plot_loss_curve,
     get_performance_metrics,
 )
-from src.utils.view_model_arch import use_netron
 
 
 log.getLogger(__name__)
@@ -36,7 +35,7 @@ log.info(f"{torch.cuda.get_device_name()}...")
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # Hyper parameters
-NUM_EPOCHS = 2
+NUM_EPOCHS = 25
 BATCH_SIZE = 128
 LEARNING_RATE = 0.0001
 classes = ("glial", "mengi", "none", "pituitary")
@@ -107,18 +106,11 @@ image, label = next(test_iter)
 log.info(f"Test Data dimension found: {image.shape}...")
 log.info(f"Test Label dimension found: {label.shape}...")
 
-# Attempt different model sizes
-### Resnet18, smaller model should generalize better
-# model = ResNet(Block, [2, 2, 2, 2], image_channels=1, num_classes=4).to(DEVICE)
-
 ### Resnet50, original model size
-model = ResNet(Block, [3, 4, 6, 3], image_channels=1, num_classes=4).to(DEVICE)
-
-### Resnet101
-# model = ResNet(Block, [3, 4, 23, 3], image_channels=1, num_classes=4).to(DEVICE)
+model = ResNetwDropout(Block, [3, 4, 6, 3], image_channels=1, num_classes=4).to(DEVICE)
 
 ### Tradition CNN
-# model = PlainCNN(CNNBlock, [6, 8, 12, 6], image_channels=1, num_classes=4).to(DEVICE)
+# model = PlainCNNwDropout(CNNBlock, [6, 8, 12, 6], image_channels=1, num_classes=4).to(DEVICE)
 
 trained_model, epoch_list, train_acc, valid_acc, loss_list = train_model(
     model, train_loader, valid_loader, NUM_EPOCHS, BATCH_SIZE, LEARNING_RATE, DEVICE
@@ -143,37 +135,32 @@ trained_model.eval()
 
 test_model(test_loader, DEVICE, trained_model, BATCH_SIZE, classes)
 
-# compute_accuracy(trained_model, train_loader, DEVICE, "Training")
-# mat = compute_confusion_matrix(trained_model, train_loader, DEVICE)
-# confusion_matrix_fig = plot_confusion_matrix(matrix=mat, classes=classes)
-# confusion_matrix_fig.savefig("results/figures/training_conf_mat.png")
-# metrics_df = get_performance_metrics(mat, classes)
-# metrics_df.to_csv("results/performance_metrics/training_conf_metrics.csv")
+compute_accuracy(trained_model, train_loader, DEVICE, "Training")
+mat = compute_confusion_matrix(trained_model, train_loader, DEVICE)
+confusion_matrix_fig = plot_confusion_matrix(matrix=mat, classes=classes)
+confusion_matrix_fig.savefig("results/figures/training_conf_mat.png")
+metrics_df = get_performance_metrics(mat, classes)
+metrics_df.to_csv("results/performance_metrics/training_conf_metrics.csv")
 
-# compute_accuracy(trained_model, valid_loader, DEVICE, "Validation")
-# mat = compute_confusion_matrix(trained_model, valid_loader, DEVICE)
-# confusion_matrix_fig = plot_confusion_matrix(matrix=mat, classes=classes)
-# confusion_matrix_fig.savefig("results/figures/valid_conf_mat.png")
-# metrics_df = get_performance_metrics(mat, classes)
-# metrics_df.to_csv("results/performance_metrics/validation_conf_metrics.csv")
+compute_accuracy(trained_model, valid_loader, DEVICE, "Validation")
+mat = compute_confusion_matrix(trained_model, valid_loader, DEVICE)
+confusion_matrix_fig = plot_confusion_matrix(matrix=mat, classes=classes)
+confusion_matrix_fig.savefig("results/figures/valid_conf_mat.png")
+metrics_df = get_performance_metrics(mat, classes)
+metrics_df.to_csv("results/performance_metrics/validation_conf_metrics.csv")
 
-# compute_accuracy(trained_model, test_loader, DEVICE, "Testing")
-# mat = compute_confusion_matrix(trained_model, test_loader, DEVICE)
-# confusion_matrix_fig = plot_confusion_matrix(matrix=mat, classes=classes)
-# confusion_matrix_fig.savefig("results/figures/testing_conf_mat.png")
-# metrics_df = get_performance_metrics(mat, classes)
-# metrics_df.to_csv("results/performance_metrics/testing_conf_metrics.csv")
-
-
-# torch.save(
-#     model.state_dict(), f"{Path.home()}/git_repos/Capstone/PlainCNN_.pt"
-# )
+compute_accuracy(trained_model, test_loader, DEVICE, "Testing")
+mat = compute_confusion_matrix(trained_model, test_loader, DEVICE)
+confusion_matrix_fig = plot_confusion_matrix(matrix=mat, classes=classes)
+confusion_matrix_fig.savefig("results/figures/testing_conf_mat.png")
+metrics_df = get_performance_metrics(mat, classes)
+metrics_df.to_csv("results/performance_metrics/testing_conf_metrics.csv")
 
 
-# y_test, y_score = create_test_score_list(trained_model, test_loader)
-# fpr, tpr, roc_auc = one_vs_rest_roc_calc(y_test, y_score, classes)
-# roc_plt = plot_roc_auc(fpr, tpr, roc_auc, classes)
-# roc_plt.savefig("results/figures/one_vs_rest_figure.png")
+torch.save(model.state_dict(), f"{Path.home()}/git_repos/Capstone/PlainCNN_.pt")
 
-# View model architecture
-use_netron(model=trained_model, data_loader=train_loader)
+
+y_test, y_score = create_test_score_list(trained_model, test_loader)
+fpr, tpr, roc_auc = one_vs_rest_roc_calc(y_test, y_score, classes)
+roc_plt = plot_roc_auc(fpr, tpr, roc_auc, classes)
+roc_plt.savefig("results/figures/one_vs_rest_figure.png")

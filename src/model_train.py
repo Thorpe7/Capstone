@@ -5,6 +5,7 @@ import numpy as np
 from itertools import product
 import logging as log
 import matplotlib.pyplot as plt
+import seaborn as sns
 
 log.basicConfig(level=log.INFO)
 log = log.getLogger(__name__)
@@ -16,12 +17,15 @@ def train_model(
     log.info("Model training started...")
     model = model.to(device)
     loss_function = nn.CrossEntropyLoss()
-    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)  # , momentum=0.9
+    optimizer = torch.optim.SGD(
+        model.parameters(), lr=learning_rate, momentum=0.9
+    )  # Adam(model.parameters(), lr=learning_rate)
 
     n_total_steps = len(train_loader)
     epoch_num = []
     train_acc_list = []
     valid_acc_list = []
+    loss_list = []
     for epoch in range(num_epochs):
         model.train()
 
@@ -32,6 +36,7 @@ def train_model(
             # Forward
             logits = model(features)
             loss = loss_function(logits, labels)
+            loss_list.append(loss.item())
 
             # Back prop
             optimizer.zero_grad()
@@ -54,7 +59,7 @@ def train_model(
             valid_acc_list.append(valid_acc)
 
     log.info("Training Completed...")
-    return model, epoch_num, train_acc_list, valid_acc_list
+    return model, epoch_num, train_acc_list, valid_acc_list, loss_list
 
 
 def test_model(test_loader, device, model, batch_size, classes):
@@ -141,10 +146,35 @@ def compute_confusion_matrix(model, data_loader, device):
     return mat
 
 
+def plot_confusion_matrix(matrix: np.ndarray, classes: tuple):
+    # Set the context for the plot
+    sns.set_context("talk")
+
+    # Create a heatmap
+    plt.figure(figsize=(8, 6))
+    sns.heatmap(
+        matrix,
+        annot=True,
+        fmt="g",
+        cmap="Blues",
+        cbar=False,
+        xticklabels=classes,
+        yticklabels=classes,
+    )
+
+    # Add labels and title (optional)
+    plt.xlabel("Predicted labels")
+    plt.ylabel("True labels")
+    plt.title("Confusion Matrix")
+
+    # Show the plot
+    return plt
+
+
 def plot_accuracy_per_iter(epoch_num: list, accuracy_list: list, name_label: str):
     plt.plot(epoch_num, accuracy_list, label=name_label)
     plt.xlabel("Epoch")
     plt.ylabel("Accuracy")
     plt.title("Accuracy Over Time")
     plt.legend()
-    plt.show()
+    return plt
