@@ -6,5 +6,5 @@ pylintrc
 src/eda/unorganized_stats/
 .vscode/
 results/
-/__pycache__/
+__pycache__
 *.pyc
