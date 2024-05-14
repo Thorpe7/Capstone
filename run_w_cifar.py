@@ -6,6 +6,7 @@ import torch
 import pandas as pd
 import torchvision
 from torchvision import transforms
+from torch.utils.data import random_split
 from src.dataset_formatting import curate_torch_csv
 from src.dataloader import custom_dataloader
 from src.resnet_arch import ResNet, BottleNeckBlock, ResNetBlock
@@ -41,59 +42,66 @@ NUM_EPOCHS = 182
 BATCH_SIZE = 128
 LEARNING_RATE = 0.1
 
-
-# CT DATASET AND PYTORCH DATA LOADING
-classes = ("glial", "mengi", "none", "pituitary")
-
-# Curate data
-if Path("data/v1/Training/*.csv").exists():
-    log.info(f"{Path('data/v1/Training/Training.csv')} already curated...")
-else:
-    curate_torch_csv(Path("data/v1/Training"))
-    log.info(f"{Path('data/v1/Training/Training.csv')} created...")
-
-if Path("data/v1/Testing/*.csv").exists():
-    log.info(f"{Path('data/v1/Testing/Testings.csv')} already curated...")
-else:
-    curate_torch_csv(Path("data/v1/Testing"), testing=True)
-    log.info(f"{Path('data/v1/Testing/Testing.csv')} created...")
-
-# Create transform for images
-training_data_transform = transforms.Compose(
+# CIFAR Transforms
+classes = (
+    "plane",
+    "car",
+    "bird",
+    "cat",
+    "deer",
+    "dog",
+    "frog",
+    "horse",
+    "ship",
+    "truck",
+)
+cifar_train_transform = transforms.Compose(
     [
         transforms.ToTensor(),
-        transforms.Resize(size=(128, 128), antialias=True),
+        transforms.Resize(size=(32, 32), antialias=True),
         transforms.RandomCrop(126, pad_if_needed=True),
         transforms.RandomHorizontalFlip(0.5),
-        transforms.Grayscale(1),
-        transforms.Normalize(mean=[0.5], std=[0.5]),
+        transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
     ]
 )
 
-testing_data_transform = transforms.Compose(
+cifar_test_transform = transforms.Compose(
     [
         transforms.ToTensor(),
-        transforms.Resize(size=(128, 128), antialias=True),
-        transforms.Grayscale(1),
-        transforms.Normalize(mean=[0.5], std=[0.5]),
+        transforms.Resize(size=(32, 32), antialias=True),
+        transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
     ]
 )
 
-# Create CT dataset
-train_dataset, valid_dataset, train_loader, valid_loader = custom_dataloader(
-    "data/v1/Training/",
-    transform=training_data_transform,
-    testing_flag=False,
-    batch_size=BATCH_SIZE,
-    validation_flag=True,
-    validation_transform=testing_data_transform,
+# Create CIFAR dataset
+train_size = 45000
+valid_size = 5000
+cifar_full_trainset = torchvision.datasets.CIFAR10(
+    root="./data", train=True, download=True, transform=None
 )
-test_dataset, test_loader = custom_dataloader(
-    "data/v1/Testing/",
-    transform=testing_data_transform,
-    testing_flag=True,
-    batch_size=BATCH_SIZE,
+cifar_trainset, cifar_validset = random_split(
+    cifar_full_trainset, [train_size, valid_size]
 )
+cifar_trainset.dataset.transform = cifar_train_transform
+cifar_validset.dataset.transform = cifar_test_transform
+
+
+# cifar train & valid loaders
+train_loader = torch.utils.data.DataLoader(
+    cifar_trainset, batch_size=BATCH_SIZE, shuffle=True, num_workers=2
+)
+valid_loader = torch.utils.data.DataLoader(
+    cifar_validset, batch_size=BATCH_SIZE, shuffle=False, num_workers=2
+)
+
+# cifar test loader
+cifar_testset = torchvision.datasets.CIFAR10(
+    root="./data", train=False, download=True, transform=cifar_test_transform
+)
+test_loader = torch.utils.data.DataLoader(
+    cifar_testset, batch_size=BATCH_SIZE, shuffle=False, num_workers=2
+)
+
 
 iter_loader = iter(train_loader)
 image, label = next(iter_loader)
@@ -114,22 +122,22 @@ log.info(f"Test Label dimension found: {label.shape}...")
 # Selecting model architecture
 model_dict = {
     "resnet18": ResNet(
-        ResNetBlock, [2, 2, 2, 2], image_channels=1, num_classes=4, bottleneck=False
+        ResNetBlock, [2, 2, 2, 2], image_channels=3, num_classes=10, bottleneck=False
     ).to(DEVICE),
     "resnet34": ResNet(
-        ResNetBlock, [3, 4, 6, 3], image_channels=1, num_classes=4, bottleneck=False
+        ResNetBlock, [3, 4, 6, 3], image_channels=3, num_classes=10, bottleneck=False
     ).to(DEVICE),
     "resnet50": ResNet(
-        BottleNeckBlock, [3, 4, 6, 3], image_channels=1, num_classes=4, bottleneck=True
+        BottleNeckBlock, [3, 4, 6, 3], image_channels=3, num_classes=10, bottleneck=True
     ).to(DEVICE),
-    "plaincnn18": PlainCNN(CNNBlock, [3, 4, 6, 3], image_channels=1, num_classes=4).to(
+    "plaincnn18": PlainCNN(CNNBlock, [3, 4, 6, 3], image_channels=3, num_classes=10).to(
         DEVICE
     ),
-    "plaincnn34": PlainCNN(CNNBlock, [6, 8, 12, 6], image_channels=1, num_classes=4).to(
-        DEVICE
-    ),
+    "plaincnn34": PlainCNN(
+        CNNBlock, [6, 8, 12, 6], image_channels=3, num_classes=10
+    ).to(DEVICE),
 }
-model = model_dict["plaincnn34"]
+model = model_dict["resnet50"]
 
 (
     trained_model,
@@ -140,6 +148,9 @@ model = model_dict["plaincnn34"]
     valid_loss_list,
 ) = train_model(model, train_loader, valid_loader, NUM_EPOCHS, LEARNING_RATE, DEVICE)
 
+####################
+
+# Save results, create figures and tables
 train_acc_plt = plot_accuracy_per_iter(epoch_list, train_acc, "Training Accuracy")
 train_acc_plt.savefig("results/figures/train_acc.png")
 valid_acc_lot = plot_accuracy_per_iter(epoch_list, valid_acc, "Validation Accuracy")
@@ -191,7 +202,7 @@ metrics_df.to_csv("results/performance_metrics/testing_conf_metrics.csv")
 
 compute_error_rate(trained_model, test_loader, DEVICE, "Testing")
 
-torch.save(model.state_dict(), f"{Path.home()}/git_repos/Capstone/Plain34_25epochs.pt")
+torch.save(model.state_dict(), f"{Path.home()}/git_repos/Capstone/Plain34_90e_cifar.pt")
 
 # Plot ROC curve
 y_test, y_score = create_test_score_list(trained_model, test_loader)

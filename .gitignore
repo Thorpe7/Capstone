@@ -8,3 +8,4 @@ src/eda/unorganized_stats/
 results/
 __pycache__
 *.pyc
+archive/

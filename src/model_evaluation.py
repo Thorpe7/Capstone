@@ -10,7 +10,7 @@ from numpy import ndarray
 from itertools import cycle
 from sklearn.metrics import roc_curve, auc
 from torch.utils.data import DataLoader
-from src.resnet50_arch import ResNet
+from src.resnet_arch import ResNet
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -84,14 +84,15 @@ def plot_roc_auc(fpr: dict, tpr: dict, roc_auc: dict, classes: tuple) -> plt:
     return plt
 
 
-def plot_loss_curve(loss_values: list) -> plt:
+def plot_loss_curve(train_loss_values: list, validation_loss_values) -> plt:
     """"""
     # Plotting the training loss
     plt.figure(figsize=(8, 6))  # Set the figure size
-    plt.plot(loss_values, label="Training Loss")
+    plt.plot(train_loss_values, label="Training Loss")
+    plt.plot(validation_loss_values, label="Validation Loss")
 
     # Adding title and labels
-    plt.title("Training Loss Curve")
+    plt.title("Training & Validation Loss Curve")
     plt.xlabel("Epochs")
     plt.ylabel("Loss")
 
