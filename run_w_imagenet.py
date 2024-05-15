@@ -46,7 +46,7 @@ LEARNING_RATE = 0.1
 
 # # CT DATASET AND PYTORCH DATA LOADING
 # classes = ("glial", "mengi", "none", "pituitary")
-with open(labels_file,'r') as fp:
+with open("/teamspace/studios/this_studio/Capstone/LOC_synset_mapping.txt",'r') as fp:
     lines = fp.readlines()
 
 classes = [line.strip().split(" ")[0] for line in lines]
@@ -103,18 +103,18 @@ log.info(f"Valid Label dimension found: {label.shape}...")
 # Selecting model architecture
 model_dict = {
     "resnet18": ResNet(
-        ResNetBlock, [2, 2, 2, 2], image_channels=1, num_classes=4, bottleneck=False
+        ResNetBlock, [2, 2, 2, 2], image_channels=3, num_classes=1000, bottleneck=False
     ).to(DEVICE),
     "resnet34": ResNet(
-        ResNetBlock, [3, 4, 6, 3], image_channels=1, num_classes=4, bottleneck=False
+        ResNetBlock, [3, 4, 6, 3], image_channels=3, num_classes=1000, bottleneck=False
     ).to(DEVICE),
     "resnet50": ResNet(
-        BottleNeckBlock, [3, 4, 6, 3], image_channels=1, num_classes=4, bottleneck=True
+        BottleNeckBlock, [3, 4, 6, 3], image_channels=3, num_classes=1000, bottleneck=True
     ).to(DEVICE),
-    "plaincnn18": PlainCNN(CNNBlock, [3, 4, 6, 3], image_channels=1, num_classes=4).to(
+    "plaincnn18": PlainCNN(CNNBlock, [3, 4, 6, 3], image_channels=3, num_classes=1000).to(
         DEVICE
     ),
-    "plaincnn34": PlainCNN(CNNBlock, [6, 8, 12, 6], image_channels=1, num_classes=4).to(
+    "plaincnn34": PlainCNN(CNNBlock, [6, 8, 12, 6], image_channels=3, num_classes=1000).to(
         DEVICE
     ),
 }
@@ -127,7 +127,7 @@ model = model_dict["resnet50"]
     valid_acc,
     train_loss_list,
     valid_loss_list,
-) = train_model(model, train_loader, valid_loader, NUM_EPOCHS, LEARNING_RATE, DEVICE)
+) = train_model(model, train_loader, val_loader, NUM_EPOCHS, LEARNING_RATE, DEVICE)
 
 train_acc_plt = plot_accuracy_per_iter(epoch_list, train_acc, "Training Accuracy")
 train_acc_plt.savefig("results/figures/train_acc.png")
@@ -164,8 +164,8 @@ confusion_matrix_fig.savefig("results/figures/training_conf_mat.png")
 metrics_df = get_performance_metrics(mat, classes)
 metrics_df.to_csv("results/performance_metrics/training_conf_metrics.csv")
 
-compute_accuracy(trained_model, valid_loader, DEVICE, "Validation", "post")
-mat = compute_confusion_matrix(trained_model, valid_loader, DEVICE)
+compute_accuracy(trained_model, val_loader, DEVICE, "Validation", "post")
+mat = compute_confusion_matrix(trained_model, val_loader, DEVICE)
 confusion_matrix_fig = plot_confusion_matrix(matrix=mat, classes=classes)
 confusion_matrix_fig.savefig("results/figures/valid_conf_mat.png")
 metrics_df = get_performance_metrics(mat, classes)

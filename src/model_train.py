@@ -50,6 +50,8 @@ def train_model(model, train_loader, valid_loader, num_epochs, learning_rate, de
 
             # Log training loss
             total_train_loss += train_loss.item()
+            percent_batch_done = batch_idx+1/len(train_loader)
+            print(f"Batch progress: {percent_batch_done}%")
 
         # Record training accuracy & loss
         avg_train_loss = total_train_loss / len(train_loader)
