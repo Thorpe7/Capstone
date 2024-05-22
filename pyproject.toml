@@ -18,7 +18,6 @@ pre-commit = "^3.4.0"
 deptry = "^0.12.0"
 opencv-python = "^4.8.1.78"
 seaborn = "^0.13.0"
-netron = "^7.3.4"
 onnx = "^1.15.0"
 kaggle = "^1.6.12"
 

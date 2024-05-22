@@ -800,16 +800,6 @@ files = [
 ]
 
 [[package]]
-name = "netron"
-version = "7.3.4"
-description = "Viewer for neural network, deep learning, and machine learning models"
-optional = false
-python-versions = "*"
-files = [
-    {file = "netron-7.3.4-py3-none-any.whl", hash = "sha256:5f13d0acbf1b15d6e548bd28b9112064c40756ab59ebdc103cdcec46f2c3062b"},
-]
-
-[[package]]
 name = "networkx"
 version = "3.1"
 description = "Python package for creating and manipulating graphs and networks"
@@ -1786,4 +1776,4 @@ testing = ["big-O", "flake8 (<5)", "jaraco.functools", "jaraco.itertools", "more
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.9"
-content-hash = "af741cc5aadaa60626c2bbe501e5f021788bc99827f6f97d262ce309521a15c0"
+content-hash = "9fd442e17d3cf59b62f05ea091b48d429c03ede23841cfe7ff729e43d41fc583"
