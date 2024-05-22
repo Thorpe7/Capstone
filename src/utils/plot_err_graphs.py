@@ -2,12 +2,12 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 plain18_df = pd.read_csv(
-    "results/performance_metrics/training_validation_acc.csv",
+    "results/performance_metrics/plain34/training_validation_acc.csv",
 )
 # plain34_df = pd.read_csv("results/performance_metrics/Plain34/training_validation_acc.csv",)
 err_plain18_df = pd.DataFrame(
     {
-        "Iterations": plain18_df["Epochs"] * 22,
+        "Iterations": plain18_df["Epochs"] * 391,
         "TrainingErrorRate": 100 - plain18_df["TrainingAccuracy"],
         "ValidationErrorRate": 100 - plain18_df["ValidationAccuracy"],
     }
@@ -43,3 +43,5 @@ plt.xlabel("Iterations")
 plt.ylabel("Values")
 plt.legend()
 plt.show()
+
+plt.savefig('plain34_err_plt.png')

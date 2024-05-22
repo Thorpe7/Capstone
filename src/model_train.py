@@ -21,8 +21,8 @@ def train_model(model, train_loader, valid_loader, num_epochs, learning_rate, de
     optimizer = torch.optim.SGD(
         model.parameters(), lr=learning_rate, momentum=0.9, weight_decay=0.0001
     )
-    scheduler = ReduceLROnPlateau(optimizer, factor=0.1, patience=20, mode="min")
-    # scheduler = MultiStepLR(optimizer, milestones=[7, 15], gamma=0.1) #[91, 137]
+    # scheduler = ReduceLROnPlateau(optimizer, factor=0.1, patience=20, mode="min")
+    scheduler = MultiStepLR(optimizer, milestones=[82, 123], gamma=0.1) 
 
     epoch_num = []
     train_acc_list, train_loss_list = [], []
@@ -31,7 +31,7 @@ def train_model(model, train_loader, valid_loader, num_epochs, learning_rate, de
     # Training loop
     for epoch in range(num_epochs):
         # Scheduler step here if using MultiStepLR
-        # scheduler.step()
+        scheduler.step()
         model.train()
         total_train_loss = 0
 
@@ -50,8 +50,6 @@ def train_model(model, train_loader, valid_loader, num_epochs, learning_rate, de
 
             # Log training loss
             total_train_loss += train_loss.item()
-            percent_batch_done = batch_idx+1/len(train_loader)
-            print(f"Batch progress: {percent_batch_done}%")
 
         # Record training accuracy & loss
         avg_train_loss = total_train_loss / len(train_loader)
@@ -81,7 +79,7 @@ def train_model(model, train_loader, valid_loader, num_epochs, learning_rate, de
         epoch_num.append(epoch + 1)
 
         # Apply scheduler if ReduceLROnPlateau is used
-        scheduler.step(avg_valid_loss)
+        # scheduler.step(avg_valid_loss)
 
         # Log training progress
         log.info(

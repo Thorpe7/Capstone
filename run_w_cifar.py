@@ -38,7 +38,7 @@ log.info(f"{torch.cuda.get_device_name()}...")
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # Hyper parameters
-NUM_EPOCHS = 182
+NUM_EPOCHS = 164
 BATCH_SIZE = 128
 LEARNING_RATE = 0.1
 
@@ -137,7 +137,7 @@ model_dict = {
         CNNBlock, [6, 8, 12, 6], image_channels=3, num_classes=10
     ).to(DEVICE),
 }
-model = model_dict["resnet50"]
+model = model_dict["resnet18"]
 
 (
     trained_model,
@@ -202,7 +202,7 @@ metrics_df.to_csv("results/performance_metrics/testing_conf_metrics.csv")
 
 compute_error_rate(trained_model, test_loader, DEVICE, "Testing")
 
-torch.save(model.state_dict(), f"{Path.home()}/git_repos/Capstone/Plain34_90e_cifar.pt")
+torch.save(model.state_dict(), f"{Path.home()}/Capstone/resnet18_164e_cifar.pt")
 
 # Plot ROC curve
 y_test, y_score = create_test_score_list(trained_model, test_loader)
