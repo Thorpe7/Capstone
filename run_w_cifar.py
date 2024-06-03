@@ -7,9 +7,14 @@ import pandas as pd
 import torchvision
 from torchvision import transforms
 from torch.utils.data import random_split
-from src.dataset_formatting import calc_imgchnnl_mean_std
+from src.dataset_formatting import (
+    calc_imgchnnl_mean_std,
+    calculate_per_pixel_mean,
+    SubtractPixelMean,
+)
 from src.resnet_arch import ResNet, BottleNeckBlock, ResNetBlock
 from src.plain_cnn import PlainCNN, CNNBlock
+from src.cifar10_plain_cnn import CifarCNNBlock, CifarPlainCNN
 from src.model_train import (
     train_model,
     test_model,
@@ -67,6 +72,15 @@ cifar_full_trainset = torchvision.datasets.CIFAR10(
 cifar_trainset, cifar_validset = random_split(
     cifar_full_trainset, [train_size, valid_size]
 )
+# cifar test loader
+cifar_testset = torchvision.datasets.CIFAR10(
+    root="./data", train=False, download=True, transform=None
+)
+
+# Calculate per pixel mean of CIFAR training, validation, and testing datasets
+training_mean = calculate_per_pixel_mean(cifar_trainset, BATCH_SIZE)
+valid_mean = calculate_per_pixel_mean(cifar_validset, BATCH_SIZE)
+testing_mean = calculate_per_pixel_mean(cifar_testset, BATCH_SIZE, testing_flag=True)
 
 # Calculate mean and std of CIFAR dataset
 mean_tensor, std_tensor = calc_imgchnnl_mean_std(
@@ -77,6 +91,7 @@ mean_tensor, std_tensor = calc_imgchnnl_mean_std(
 cifar_train_transform = transforms.Compose(
     [
         transforms.ToTensor(),
+        SubtractPixelMean(training_mean),
         transforms.Normalize(mean_tensor, std_tensor),
         transforms.Pad(padding=4),
         transforms.RandomHorizontalFlip(0.5),
@@ -87,13 +102,14 @@ cifar_train_transform = transforms.Compose(
 cifar_test_transform = transforms.Compose(
     [
         transforms.ToTensor(),
+        SubtractPixelMean(testing_mean),
         transforms.Normalize(mean_tensor, std_tensor),
     ]
 )
 
 cifar_trainset.dataset.transform = cifar_train_transform
 cifar_validset.dataset.transform = cifar_test_transform
-
+cifar_test_transform.transform = cifar_test_transform
 
 # cifar train & valid loaders
 train_loader = torch.utils.data.DataLoader(
@@ -101,11 +117,6 @@ train_loader = torch.utils.data.DataLoader(
 )
 valid_loader = torch.utils.data.DataLoader(
     cifar_validset, batch_size=BATCH_SIZE, shuffle=False, num_workers=2
-)
-
-# cifar test loader
-cifar_testset = torchvision.datasets.CIFAR10(
-    root="./data", train=False, download=True, transform=cifar_test_transform
 )
 test_loader = torch.utils.data.DataLoader(
     cifar_testset, batch_size=BATCH_SIZE, shuffle=False, num_workers=2
@@ -145,8 +156,14 @@ model_dict = {
     "plaincnn34": PlainCNN(
         CNNBlock, [6, 8, 12, 6], image_channels=3, num_classes=10
     ).to(DEVICE),
+    "cifar_plaincnn20": CifarPlainCNN(
+        CifarCNNBlock, [6, 6, 6], image_channels=3, num_classes=10
+    ).to(DEVICE),
+    "cifar_plaincnn32": CifarPlainCNN(
+        CifarCNNBlock, [10, 10, 10], image_channels=3, num_classes=10
+    ).to(DEVICE),
 }
-model = model_dict["plaincnn34"]
+model = model_dict["cifar_plaincnn20"]
 # model = resnet18(weights=None).to(DEVICE)  # check against default model
 
 (
@@ -213,7 +230,8 @@ metrics_df.to_csv("results/performance_metrics/testing_conf_metrics.csv")
 compute_error_rate(trained_model, test_loader, DEVICE, "Testing")
 
 torch.save(
-    model.state_dict(), f"{Path.home()}/git_repos/Capstone/plaincnn34_164e_cifar.pt"
+    model.state_dict(),
+    f"{Path.home()}/git_repos/Capstone/cifar_plaincnn20_164e_cifar.pt",
 )
 
 # Plot ROC curve

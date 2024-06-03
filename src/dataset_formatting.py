@@ -101,3 +101,51 @@ def calc_imgchnnl_mean_std(
     std = torch.sqrt(std / total_pixels - mean**2)
 
     return mean, std
+
+
+def calculate_per_pixel_mean(
+    input_dataset: Any, batch_size: int, testing_flag: bool = False
+) -> float:
+    """Calculates the mean of all pixels in a given dataset.
+
+    Args:
+        input_dataset (Any): Pytorch dataloader object
+        batch_size (int): Batch size for dataloader
+        testing_flat (bool): Flag for testing dataset
+
+    Returns:
+        Tensor: Tensor of the mean pixel values
+    """
+
+    # Modify dataset so images are tensors
+    convert_to_tensor = torchvision.transforms.Compose(
+        [torchvision.transforms.ToTensor()]
+    )
+    if not testing_flag:
+        input_dataset.dataset.transform = convert_to_tensor
+    else:
+        input_dataset.transform = convert_to_tensor
+
+    # Create dataloader
+    dataloader = torch.utils.data.DataLoader(
+        input_dataset, batch_size=batch_size, shuffle=True, num_workers=2
+    )
+
+    mean = 0.0
+    count = 0
+
+    # Calculate mean of all batches
+    for images, _ in dataloader:
+        mean += images.sum(dim=0)
+        count += images.size(0)
+
+    mean /= count
+    return mean
+
+
+class SubtractPixelMean:
+    def __init__(self, mean):
+        self.mean = mean
+
+    def __call__(self, img):
+        return img - self.mean
