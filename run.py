@@ -37,7 +37,7 @@ log.info(f"{torch.cuda.get_device_name()}...")
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # Hyper parameters
-NUM_EPOCHS = 182
+NUM_EPOCHS = 164
 BATCH_SIZE = 128
 LEARNING_RATE = 0.1
 
@@ -62,20 +62,20 @@ else:
 training_data_transform = transforms.Compose(
     [
         transforms.ToTensor(),
-        transforms.Resize(size=(128, 128), antialias=True),
-        transforms.RandomCrop(126, pad_if_needed=True),
+        transforms.Resize(size=(32, 32), antialias=True),
+        transforms.Normalize(mean=[0.5], std=[0.5]),
+        transforms.RandomCrop(32, pad_if_needed=True),
         transforms.RandomHorizontalFlip(0.5),
         transforms.Grayscale(1),
-        transforms.Normalize(mean=[0.5], std=[0.5]),
     ]
 )
 
 testing_data_transform = transforms.Compose(
     [
         transforms.ToTensor(),
-        transforms.Resize(size=(128, 128), antialias=True),
-        transforms.Grayscale(1),
+        transforms.Resize(size=(32, 32), antialias=True),
         transforms.Normalize(mean=[0.5], std=[0.5]),
+        transforms.Grayscale(1),
     ]
 )
 
@@ -191,7 +191,10 @@ metrics_df.to_csv("results/performance_metrics/testing_conf_metrics.csv")
 
 compute_error_rate(trained_model, test_loader, DEVICE, "Testing")
 
-torch.save(model.state_dict(), f"{Path.home()}/git_repos/Capstone/Plain34_25epochs.pt")
+torch.save(
+    model.state_dict(),
+    f"{Path.home()}/git_repos/Capstone/brain_plaincnn34_162epochs.pt",
+)
 
 # Plot ROC curve
 y_test, y_score = create_test_score_list(trained_model, test_loader)

@@ -2,12 +2,19 @@
 Takes dataset and currates it for adequate use w/ pytorch dataset & loader
 
 """
+
 import pathlib
 from pathlib import Path
 import pandas as pd
 import logging as log
 import shutil
 from PIL import Image
+import torch
+import torchvision
+from torch.utils.data import DataLoader
+from typing import Tuple, Any
+from torch import Tensor
+
 
 log.basicConfig(level=log.INFO)
 log = log.getLogger(__name__)
@@ -63,3 +70,34 @@ def find_smallest_img_dim(path_to_dir: pathlib.PosixPath) -> tuple:
                         min_dim = img.size
 
     return min_dim
+
+
+def calc_imgchnnl_mean_std(
+    train_dataset: Any, batch_size: int
+) -> Tuple[Tensor, Tensor]:
+    mean = torch.zeros(3)
+    std = torch.zeros(3)
+    total_pixels = 0
+
+    # Modify trianing dataset so images are tensors
+    convert_to_tensor = torchvision.transforms.Compose(
+        [torchvision.transforms.ToTensor()]
+    )
+    train_dataset.dataset.transform = convert_to_tensor
+
+    # Create dataloader
+    tmp_loader = torch.utils.data.DataLoader(
+        train_dataset, batch_size=batch_size, shuffle=True, num_workers=2
+    )
+
+    for images, _ in tmp_loader:
+        for i in range(3):
+            mean[i] += images[:, i, :, :].sum()
+            std[i] += images[:, i, :, :].pow(2).sum()
+            total_pixels += images.size(0) * images.size(2) * images.size(3)
+
+    # Calculate mean and std
+    mean /= total_pixels
+    std = torch.sqrt(std / total_pixels - mean**2)
+
+    return mean, std

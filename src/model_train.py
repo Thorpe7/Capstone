@@ -22,7 +22,7 @@ def train_model(model, train_loader, valid_loader, num_epochs, learning_rate, de
         model.parameters(), lr=learning_rate, momentum=0.9, weight_decay=0.0001
     )
     # scheduler = ReduceLROnPlateau(optimizer, factor=0.1, patience=20, mode="min")
-    scheduler = MultiStepLR(optimizer, milestones=[82, 123], gamma=0.1) 
+    scheduler = MultiStepLR(optimizer, milestones=[82, 123], gamma=0.1)
 
     epoch_num = []
     train_acc_list, train_loss_list = [], []
@@ -31,7 +31,7 @@ def train_model(model, train_loader, valid_loader, num_epochs, learning_rate, de
     # Training loop
     for epoch in range(num_epochs):
         # Scheduler step here if using MultiStepLR
-        scheduler.step()
+        # scheduler.step()
         model.train()
         total_train_loss = 0
 
@@ -80,6 +80,7 @@ def train_model(model, train_loader, valid_loader, num_epochs, learning_rate, de
 
         # Apply scheduler if ReduceLROnPlateau is used
         # scheduler.step(avg_valid_loss)
+        scheduler.step()  # Apply scheduler after each epoch
 
         # Log training progress
         log.info(
@@ -141,7 +142,7 @@ def compute_accuracy(model, data_loader, device, acc_type, model_status=None):
 
         for i, (features, targets) in enumerate(data_loader):
             features = features.to(device)
-            targets = targets.float().to(device)
+            targets = targets.to(device)
 
             logits = model(features)
             _, predicted_labels = torch.max(logits, 1)
@@ -149,8 +150,8 @@ def compute_accuracy(model, data_loader, device, acc_type, model_status=None):
             num_examples += targets.size(0)
             correct_pred += (predicted_labels == targets).sum()
     if model_status == "post":
-        log.info(f"{acc_type} Accuracy: {correct_pred.float()/num_examples * 100}")
-    computed_accuracy = correct_pred.float() / num_examples * 100
+        log.info(f"{acc_type} Accuracy: {correct_pred/num_examples * 100}")
+    computed_accuracy = correct_pred / num_examples * 100
     return round(computed_accuracy.item(), 2)
 
 

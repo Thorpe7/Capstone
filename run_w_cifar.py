@@ -7,8 +7,7 @@ import pandas as pd
 import torchvision
 from torchvision import transforms
 from torch.utils.data import random_split
-from src.dataset_formatting import curate_torch_csv
-from src.dataloader import custom_dataloader
+from src.dataset_formatting import calc_imgchnnl_mean_std
 from src.resnet_arch import ResNet, BottleNeckBlock, ResNetBlock
 from src.plain_cnn import PlainCNN, CNNBlock
 from src.model_train import (
@@ -27,6 +26,9 @@ from src.model_evaluation import (
     plot_loss_curve,
     get_performance_metrics,
 )
+
+# run defualt resnet from torchvision to validate personal model
+# from torchvision.models import resnet18, ResNet18_Weights
 
 log.getLogger(__name__)
 log.basicConfig(level=log.INFO)
@@ -55,25 +57,8 @@ classes = (
     "ship",
     "truck",
 )
-cifar_train_transform = transforms.Compose(
-    [
-        transforms.ToTensor(),
-        transforms.Resize(size=(32, 32), antialias=True),
-        transforms.RandomCrop(126, pad_if_needed=True),
-        transforms.RandomHorizontalFlip(0.5),
-        transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
-    ]
-)
 
-cifar_test_transform = transforms.Compose(
-    [
-        transforms.ToTensor(),
-        transforms.Resize(size=(32, 32), antialias=True),
-        transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
-    ]
-)
-
-# Create CIFAR dataset
+# Create CIFAR dataset train and validation sets
 train_size = 45000
 valid_size = 5000
 cifar_full_trainset = torchvision.datasets.CIFAR10(
@@ -82,6 +67,30 @@ cifar_full_trainset = torchvision.datasets.CIFAR10(
 cifar_trainset, cifar_validset = random_split(
     cifar_full_trainset, [train_size, valid_size]
 )
+
+# Calculate mean and std of CIFAR dataset
+mean_tensor, std_tensor = calc_imgchnnl_mean_std(
+    cifar_trainset, BATCH_SIZE
+)  # mean: tensor([0.1638, 0.1607, 0.1488]), std: tensor([0.2719, 0.2671, 0.2589])
+
+# Create CIFAR transforms & apply
+cifar_train_transform = transforms.Compose(
+    [
+        transforms.ToTensor(),
+        transforms.Normalize(mean_tensor, std_tensor),
+        transforms.Pad(padding=4),
+        transforms.RandomHorizontalFlip(0.5),
+        transforms.RandomCrop(32, pad_if_needed=True),
+    ]
+)
+
+cifar_test_transform = transforms.Compose(
+    [
+        transforms.ToTensor(),
+        transforms.Normalize(mean_tensor, std_tensor),
+    ]
+)
+
 cifar_trainset.dataset.transform = cifar_train_transform
 cifar_validset.dataset.transform = cifar_test_transform
 
@@ -102,7 +111,7 @@ test_loader = torch.utils.data.DataLoader(
     cifar_testset, batch_size=BATCH_SIZE, shuffle=False, num_workers=2
 )
 
-
+# Print quick dimension check
 iter_loader = iter(train_loader)
 image, label = next(iter_loader)
 log.info(f"Data dimension found: {image.shape}...")
@@ -137,7 +146,8 @@ model_dict = {
         CNNBlock, [6, 8, 12, 6], image_channels=3, num_classes=10
     ).to(DEVICE),
 }
-model = model_dict["resnet18"]
+model = model_dict["plaincnn34"]
+# model = resnet18(weights=None).to(DEVICE)  # check against default model
 
 (
     trained_model,
@@ -202,7 +212,9 @@ metrics_df.to_csv("results/performance_metrics/testing_conf_metrics.csv")
 
 compute_error_rate(trained_model, test_loader, DEVICE, "Testing")
 
-torch.save(model.state_dict(), f"{Path.home()}/Capstone/resnet18_164e_cifar.pt")
+torch.save(
+    model.state_dict(), f"{Path.home()}/git_repos/Capstone/plaincnn34_164e_cifar.pt"
+)
 
 # Plot ROC curve
 y_test, y_score = create_test_score_list(trained_model, test_loader)
