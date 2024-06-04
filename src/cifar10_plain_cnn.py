@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import logging
+import torch.nn.functional as F
 
 
 class CifarCNNBlock(nn.Module):
@@ -32,12 +33,11 @@ class CifarPlainCNN(nn.Module):
         # First conv layer
         self.in_channels = 16
         self.conv1 = nn.Conv2d(
-            image_channels, out_channels=16, kernel_size=3, stride=1, padding=3
+            image_channels, out_channels=16, kernel_size=3, stride=1, padding=1
         )
         nn.init.kaiming_normal_(self.conv1.weight, mode="fan_in", nonlinearity="relu")
         self.bn1 = nn.BatchNorm2d(16)
         self.relu = nn.ReLU()
-        self.maxpool = nn.MaxPool2d(kernel_size=3, stride=1, padding=1)
 
         # Call CNN Blocks
         self.block2 = self._make_layers(Block, num_layers[0], out_channels=16, stride=1)
@@ -52,7 +52,6 @@ class CifarPlainCNN(nn.Module):
         x = self.conv1(x)
         x = self.bn1(x)
         x = self.relu(x)
-        x = self.maxpool(x)
 
         # layers contained in blocks 2-4 (6(n)) number of layers
         x = self.block2(x)
@@ -63,6 +62,7 @@ class CifarPlainCNN(nn.Module):
         x = self.avgpool(x)
         x = x.reshape(x.shape[0], -1)
         x = self.fc(x)
+        x = F.softmax(x, dim=1)
 
         return x
 

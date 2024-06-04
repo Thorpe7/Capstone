@@ -73,7 +73,7 @@ def find_smallest_img_dim(path_to_dir: pathlib.PosixPath) -> tuple:
 
 
 def calc_imgchnnl_mean_std(
-    train_dataset: Any, batch_size: int
+    train_dataset: Any, batch_size: int, test_flag: bool = False
 ) -> Tuple[Tensor, Tensor]:
     mean = torch.zeros(3)
     std = torch.zeros(3)
@@ -83,7 +83,10 @@ def calc_imgchnnl_mean_std(
     convert_to_tensor = torchvision.transforms.Compose(
         [torchvision.transforms.ToTensor()]
     )
-    train_dataset.dataset.transform = convert_to_tensor
+    if not test_flag:
+        train_dataset.dataset.transform = convert_to_tensor
+    else:
+        train_dataset.transform = convert_to_tensor
 
     # Create dataloader
     tmp_loader = torch.utils.data.DataLoader(

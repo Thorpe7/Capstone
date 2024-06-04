@@ -22,7 +22,7 @@ def train_model(model, train_loader, valid_loader, num_epochs, learning_rate, de
         model.parameters(), lr=learning_rate, momentum=0.9, weight_decay=0.0001
     )
     # scheduler = ReduceLROnPlateau(optimizer, factor=0.1, patience=20, mode="min")
-    scheduler = MultiStepLR(optimizer, milestones=[82, 123], gamma=0.1)
+    scheduler = MultiStepLR(optimizer, milestones=[91, 136], gamma=0.1)
 
     epoch_num = []
     train_acc_list, train_loss_list = [], []

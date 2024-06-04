@@ -45,7 +45,7 @@ log.info(f"{torch.cuda.get_device_name()}...")
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # Hyper parameters
-NUM_EPOCHS = 164
+NUM_EPOCHS = 182
 BATCH_SIZE = 128
 LEARNING_RATE = 0.1
 
@@ -79,36 +79,47 @@ cifar_testset = torchvision.datasets.CIFAR10(
 
 # Calculate per pixel mean of CIFAR training, validation, and testing datasets
 training_mean = calculate_per_pixel_mean(cifar_trainset, BATCH_SIZE)
-valid_mean = calculate_per_pixel_mean(cifar_validset, BATCH_SIZE)
+valid_mean = calculate_per_pixel_mean(cifar_validset, BATCH_SIZE, testing_flag=True)
 testing_mean = calculate_per_pixel_mean(cifar_testset, BATCH_SIZE, testing_flag=True)
 
 # Calculate mean and std of CIFAR dataset
-mean_tensor, std_tensor = calc_imgchnnl_mean_std(
+training_mean_tensor, training_std_tensor = calc_imgchnnl_mean_std(
     cifar_trainset, BATCH_SIZE
 )  # mean: tensor([0.1638, 0.1607, 0.1488]), std: tensor([0.2719, 0.2671, 0.2589])
+valid_mean_tensor, valid_std_tensor = calc_imgchnnl_mean_std(cifar_validset, BATCH_SIZE)
+testing_mean_tensor, testing_std_tensor = calc_imgchnnl_mean_std(
+    cifar_testset, BATCH_SIZE, test_flag=True
+)
 
 # Create CIFAR transforms & apply
 cifar_train_transform = transforms.Compose(
     [
         transforms.ToTensor(),
         SubtractPixelMean(training_mean),
-        transforms.Normalize(mean_tensor, std_tensor),
+        transforms.Normalize(training_mean_tensor, training_std_tensor),
         transforms.Pad(padding=4),
         transforms.RandomHorizontalFlip(0.5),
         transforms.RandomCrop(32, pad_if_needed=True),
     ]
 )
 
+cifar_valid_transform = transforms.Compose(
+    [
+        transforms.ToTensor(),
+        SubtractPixelMean(valid_mean),
+        transforms.Normalize(valid_mean_tensor, valid_std_tensor),
+    ]
+)
 cifar_test_transform = transforms.Compose(
     [
         transforms.ToTensor(),
         SubtractPixelMean(testing_mean),
-        transforms.Normalize(mean_tensor, std_tensor),
+        transforms.Normalize(testing_mean_tensor, testing_std_tensor),
     ]
 )
 
 cifar_trainset.dataset.transform = cifar_train_transform
-cifar_validset.dataset.transform = cifar_test_transform
+cifar_validset.dataset.transform = cifar_valid_transform
 cifar_test_transform.transform = cifar_test_transform
 
 # cifar train & valid loaders
@@ -162,8 +173,11 @@ model_dict = {
     "cifar_plaincnn32": CifarPlainCNN(
         CifarCNNBlock, [10, 10, 10], image_channels=3, num_classes=10
     ).to(DEVICE),
+    "cifar_plaincnn44": CifarPlainCNN(
+        CifarCNNBlock, [14, 14, 14], image_channels=3, num_classes=10
+    ).to(DEVICE),
 }
-model = model_dict["cifar_plaincnn20"]
+model = model_dict["cifar_plaincnn32"]
 # model = resnet18(weights=None).to(DEVICE)  # check against default model
 
 (
@@ -231,7 +245,7 @@ compute_error_rate(trained_model, test_loader, DEVICE, "Testing")
 
 torch.save(
     model.state_dict(),
-    f"{Path.home()}/git_repos/Capstone/cifar_plaincnn20_164e_cifar.pt",
+    f"{Path.home()}/git_repos/Capstone/cifar_plaincnn44_182e_cifar.pt",
 )
 
 # Plot ROC curve
