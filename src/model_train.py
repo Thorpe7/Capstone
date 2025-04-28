@@ -21,8 +21,11 @@ def train_model(model, train_loader, valid_loader, num_epochs, learning_rate, de
     optimizer = torch.optim.SGD(
         model.parameters(), lr=learning_rate, momentum=0.9, weight_decay=0.0001
     )
-    # scheduler = ReduceLROnPlateau(optimizer, factor=0.1, patience=20, mode="min")
-    scheduler = MultiStepLR(optimizer, milestones=[91, 136], gamma=0.1)
+    scheduler = ReduceLROnPlateau(optimizer, factor=0.1, patience=10, mode="min")
+    # scheduler = MultiStepLR(optimizer, milestones=[91, 136], gamma=0.1)
+
+    #! Early stopping
+    early_stopping = EarlyStopping(patience=20, verbose=True)
 
     epoch_num = []
     train_acc_list, train_loss_list = [], []
@@ -30,8 +33,6 @@ def train_model(model, train_loader, valid_loader, num_epochs, learning_rate, de
 
     # Training loop
     for epoch in range(num_epochs):
-        # Scheduler step here if using MultiStepLR
-        # scheduler.step()
         model.train()
         total_train_loss = 0
 
@@ -79,8 +80,8 @@ def train_model(model, train_loader, valid_loader, num_epochs, learning_rate, de
         epoch_num.append(epoch + 1)
 
         # Apply scheduler if ReduceLROnPlateau is used
-        # scheduler.step(avg_valid_loss)
-        scheduler.step()  # Apply scheduler after each epoch
+        scheduler.step(avg_valid_loss)
+        # scheduler.step()  # Apply scheduler after each epoch (MR scheduler)
 
         # Log training progress
         log.info(
@@ -91,6 +92,12 @@ def train_model(model, train_loader, valid_loader, num_epochs, learning_rate, de
             f"Valid Acc: {valid_acc:.2f}, "
             f"Current LR: {current_lr}"
         )
+
+        #! Early stopping
+        early_stopping(avg_valid_loss, model)
+        if early_stopping.early_stop:
+            log.info("Early stopping triggered")
+            break
 
     log.info("Training Completed...")
     return (
@@ -242,3 +249,28 @@ def compute_error_rate(model, data_loader, device, acc_type):
 
     log.info(f"{acc_type} Error Rate: {error_rate}%")
     return round(error_rate.item(), 2)
+
+
+class EarlyStopping:
+    def __init__(self, patience=10, verbose=False, delta=0):
+        self.patience = patience
+        self.verbose = verbose
+        self.counter = 0
+        self.best_loss = None
+        self.early_stop = False
+        self.delta = delta
+
+    def __call__(self, val_loss, model):
+        if self.best_loss is None:
+            self.best_loss = val_loss
+        elif val_loss > self.best_loss - self.delta:
+            self.counter += 1
+            if self.verbose:
+                log.info(
+                    f"EarlyStopping counter: {self.counter} out of {self.patience}"
+                )
+            if self.counter >= self.patience:
+                self.early_stop = True
+        else:
+            self.best_loss = val_loss
+            self.counter = 0

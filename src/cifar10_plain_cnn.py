@@ -2,6 +2,8 @@ import torch
 import torch.nn as nn
 import logging
 import torch.nn.functional as F
+import torchvision
+from torchview import draw_graph
 
 
 class CifarCNNBlock(nn.Module):
@@ -40,11 +42,12 @@ class CifarPlainCNN(nn.Module):
         self.relu = nn.ReLU()
 
         # Call CNN Blocks
-        self.block2 = self._make_layers(Block, num_layers[0], out_channels=16, stride=1)
-        self.block3 = self._make_layers(Block, num_layers[1], out_channels=32, stride=2)
-        self.block4 = self._make_layers(Block, num_layers[2], out_channels=64, stride=2)
+        self.block1 = self._make_layers(Block, num_layers[0], out_channels=16, stride=1)
+        self.block2 = self._make_layers(Block, num_layers[1], out_channels=32, stride=2)
+        self.block3 = self._make_layers(Block, num_layers[2], out_channels=64, stride=2)
 
         self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
+        self.dropout = nn.Dropout(p=0.5)  #! Dropout layer
         self.fc = nn.Linear(64, num_classes)
 
     def forward(self, x):
@@ -54,12 +57,13 @@ class CifarPlainCNN(nn.Module):
         x = self.relu(x)
 
         # layers contained in blocks 2-4 (6(n)) number of layers
+        x = self.block1(x)
         x = self.block2(x)
         x = self.block3(x)
-        x = self.block4(x)
 
         # Dense Layer
         x = self.avgpool(x)
+        x = self.dropout(x)  #! Dropout layer
         x = x.reshape(x.shape[0], -1)
         x = self.fc(x)
         x = F.softmax(x, dim=1)
@@ -81,4 +85,28 @@ class CifarPlainCNN(nn.Module):
 
 if __name__ == "__main__":
     test_CNN = CifarPlainCNN(CifarCNNBlock, [6, 6, 6], 3, 10)
-    print(test_CNN)
+
+    model_graph = draw_graph(
+        model=test_CNN,
+        input_size=(1, 3, 32, 32),
+        expand_nested=True,
+        save_graph=True,
+        filename="Cifar10_PlainCNN_Architecture",
+    )
+    model_graph.visual_graph
+
+    vgg_model = torchvision.models.vgg19()
+
+    vgg_graph = draw_graph(
+        model=vgg_model,
+        input_size=(1, 3, 32, 32),
+        expand_nested=True,
+        save_graph=True,
+        filename="BASE_VGG_Architecture",
+    )
+    model_graph.visual_graph
+
+    def count_parameters(model):
+        return sum(p.numel() for p in model.parameters() if p.requires_grad)
+
+    print(count_parameters(test_CNN))

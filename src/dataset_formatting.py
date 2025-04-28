@@ -73,16 +73,22 @@ def find_smallest_img_dim(path_to_dir: pathlib.PosixPath) -> tuple:
 
 
 def calc_imgchnnl_mean_std(
-    train_dataset: Any, batch_size: int, test_flag: bool = False
+    train_dataset: Any,
+    batch_size: int,
+    test_flag: bool = False,
+    transform: Any = None,
 ) -> Tuple[Tensor, Tensor]:
     mean = torch.zeros(3)
     std = torch.zeros(3)
     total_pixels = 0
 
     # Modify trianing dataset so images are tensors
-    convert_to_tensor = torchvision.transforms.Compose(
-        [torchvision.transforms.ToTensor()]
-    )
+    if not transform:
+        convert_to_tensor = torchvision.transforms.Compose(
+            [torchvision.transforms.ToTensor()]
+        )
+    else:
+        convert_to_tensor = transform
     if not test_flag:
         train_dataset.dataset.transform = convert_to_tensor
     else:
@@ -107,7 +113,10 @@ def calc_imgchnnl_mean_std(
 
 
 def calculate_per_pixel_mean(
-    input_dataset: Any, batch_size: int, testing_flag: bool = False
+    input_dataset: Any,
+    batch_size: int,
+    testing_flag: bool = False,
+    transform: Any = None,
 ) -> float:
     """Calculates the mean of all pixels in a given dataset.
 
@@ -121,9 +130,12 @@ def calculate_per_pixel_mean(
     """
 
     # Modify dataset so images are tensors
-    convert_to_tensor = torchvision.transforms.Compose(
-        [torchvision.transforms.ToTensor()]
-    )
+    if not transform:
+        convert_to_tensor = torchvision.transforms.Compose(
+            [torchvision.transforms.ToTensor()]
+        )
+    else:
+        convert_to_tensor = transform
     if not testing_flag:
         input_dataset.dataset.transform = convert_to_tensor
     else:

@@ -15,6 +15,7 @@ from src.dataset_formatting import (
 from src.resnet_arch import ResNet, BottleNeckBlock, ResNetBlock
 from src.plain_cnn import PlainCNN, CNNBlock
 from src.cifar10_plain_cnn import CifarCNNBlock, CifarPlainCNN
+from src.cifar10_resnet_arch import CifarResNet, CifarResNetBlock
 from src.model_train import (
     train_model,
     test_model,
@@ -176,8 +177,23 @@ model_dict = {
     "cifar_plaincnn44": CifarPlainCNN(
         CifarCNNBlock, [14, 14, 14], image_channels=3, num_classes=10
     ).to(DEVICE),
+    "cifar_plaincnn56": CifarPlainCNN(
+        CifarCNNBlock, [18, 18, 18], image_channels=3, num_classes=10
+    ).to(DEVICE),
+    "cifar_resnet20": CifarResNet(
+        CifarResNetBlock, [6, 6, 6], image_channels=3, num_classes=10
+    ).to(DEVICE),
+    "cifar_resnet32": CifarResNet(
+        CifarResNetBlock, [10, 10, 10], image_channels=3, num_classes=10
+    ).to(DEVICE),
+    "cifar_resnet44": CifarResNet(
+        CifarResNetBlock, [14, 14, 14], image_channels=3, num_classes=10
+    ).to(DEVICE),
+    "cifar_resnet56": CifarResNet(
+        CifarResNetBlock, [18, 18, 18], image_channels=3, num_classes=10
+    ).to(DEVICE),
 }
-model = model_dict["cifar_plaincnn32"]
+model = model_dict["cifar_resnet44"]
 # model = resnet18(weights=None).to(DEVICE)  # check against default model
 
 (
@@ -245,7 +261,7 @@ compute_error_rate(trained_model, test_loader, DEVICE, "Testing")
 
 torch.save(
     model.state_dict(),
-    f"{Path.home()}/git_repos/Capstone/cifar_plaincnn44_182e_cifar.pt",
+    f"{Path.home()}/git_repos/Capstone/cifar_resnet44_182e_cifar.pt",
 )
 
 # Plot ROC curve
