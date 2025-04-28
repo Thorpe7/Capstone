@@ -5,65 +5,119 @@ import numpy as np
 from itertools import product
 import logging as log
 import matplotlib.pyplot as plt
+import seaborn as sns
+from torch.optim.lr_scheduler import ReduceLROnPlateau, MultiStepLR
 
 log.basicConfig(level=log.INFO)
 log = log.getLogger(__name__)
 
 
-def train_model(
-    model, train_loader, valid_loader, num_epochs, batch_size, learning_rate, device
-):
+def train_model(model, train_loader, valid_loader, num_epochs, learning_rate, device):
     log.info("Model training started...")
     model = model.to(device)
-    loss_function = nn.CrossEntropyLoss()
-    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)  # , momentum=0.9
 
-    n_total_steps = len(train_loader)
+    # Set-up training parameters
+    loss_function = nn.CrossEntropyLoss()
+    optimizer = torch.optim.SGD(
+        model.parameters(), lr=learning_rate, momentum=0.9, weight_decay=0.0001
+    )
+    scheduler = ReduceLROnPlateau(optimizer, factor=0.1, patience=10, mode="min")
+    # scheduler = MultiStepLR(optimizer, milestones=[91, 136], gamma=0.1)
+
+    #! Early stopping
+    early_stopping = EarlyStopping(patience=20, verbose=True)
+
     epoch_num = []
-    train_acc_list = []
-    valid_acc_list = []
+    train_acc_list, train_loss_list = [], []
+    valid_acc_list, valid_loss_list = [], []
+
+    # Training loop
     for epoch in range(num_epochs):
         model.train()
+        total_train_loss = 0
 
+        # Iterate through batches
         for batch_idx, (features, labels) in enumerate(train_loader):
-            features = features.to(device)
-            labels = labels.to(device)
+            features, labels = features.to(device), labels.to(device)
 
             # Forward
-            logits = model(features)
-            loss = loss_function(logits, labels)
-
-            # Back prop
             optimizer.zero_grad()
-            loss.backward()
+            logits = model(features)
+            train_loss = loss_function(logits, labels)
 
-            # Update model parameters
+            # Back prop & update model parameters
+            train_loss.backward()
             optimizer.step()
 
-            if (batch_idx + 1) % 10 == 0:
-                log.info(
-                    f"Epoch [{epoch+1}/{num_epochs}], Step [{batch_idx+1}/{n_total_steps}], Loss: {loss.item():.4f}"
-                )
+            # Log training loss
+            total_train_loss += train_loss.item()
 
+        # Record training accuracy & loss
+        avg_train_loss = total_train_loss / len(train_loader)
+        train_loss_list.append(avg_train_loss)
+        train_acc = compute_accuracy(model, train_loader, device, "Training")
+        train_acc_list.append(train_acc)
+
+        # Set to eval for validation
         model.eval()
+
+        total_valid_loss = 0
         with torch.no_grad():
-            train_acc = compute_accuracy(model, train_loader, device, "Training")
-            valid_acc = compute_accuracy(model, valid_loader, device, "Validation")
-            epoch_num.append(epoch + 1)
-            train_acc_list.append(train_acc)
-            valid_acc_list.append(valid_acc)
+            for features, labels in valid_loader:
+                features, labels = features.to(device), labels.to(device)
+                logits = model(features)
+                valid_loss = loss_function(logits, labels)
+                total_valid_loss += valid_loss.item()
+
+        # Record validation accuracy & loss
+        avg_valid_loss = total_valid_loss / len(valid_loader)
+        valid_loss_list.append(avg_valid_loss)
+        valid_acc = compute_accuracy(model, valid_loader, device, "Validation")
+        valid_acc_list.append(valid_acc)
+        current_lr = optimizer.param_groups[0]["lr"]
+
+        # Log epoch number
+        epoch_num.append(epoch + 1)
+
+        # Apply scheduler if ReduceLROnPlateau is used
+        scheduler.step(avg_valid_loss)
+        # scheduler.step()  # Apply scheduler after each epoch (MR scheduler)
+
+        # Log training progress
+        log.info(
+            f"Epoch {epoch+1}/{num_epochs}, "
+            f"Train Loss: {avg_train_loss:.4f}, "
+            f"Valid Loss: {avg_valid_loss:.4f}, "
+            f"Train Acc: {train_acc:.2f}, "
+            f"Valid Acc: {valid_acc:.2f}, "
+            f"Current LR: {current_lr}"
+        )
+
+        #! Early stopping
+        early_stopping(avg_valid_loss, model)
+        if early_stopping.early_stop:
+            log.info("Early stopping triggered")
+            break
 
     log.info("Training Completed...")
-    return model, epoch_num, train_acc_list, valid_acc_list
+    return (
+        model,
+        epoch_num,
+        train_acc_list,
+        valid_acc_list,
+        train_loss_list,
+        valid_loss_list,
+    )
 
 
 def test_model(test_loader, device, model, batch_size, classes):
     model = model.to(device)
+    model.eval()
     with torch.no_grad():
         n_correct = 0
         n_samples = 0
-        n_class_correct = [0 for i in range(4)]
-        n_class_samples = [0 for i in range(4)]
+        n_class_correct = [0 for i in range(len(classes))]
+        n_class_samples = [0 for i in range(len(classes))]
         for images, labels in test_loader:
             images = images.to(device)
             labels = labels.to(device)
@@ -84,26 +138,27 @@ def test_model(test_loader, device, model, batch_size, classes):
         acc = 100.0 * n_correct / n_samples
         log.info(f"Accuracy of the network: {acc} %")
 
-        for i in range(4):
+        for i in range(len(classes)):
             acc = 100.0 * n_class_correct[i] / n_class_samples[i]
             log.info(f"Accuracy of {classes[i]}: {acc} %")
 
 
-def compute_accuracy(model, data_loader, device, acc_type):
+def compute_accuracy(model, data_loader, device, acc_type, model_status=None):
     with torch.no_grad():
         correct_pred, num_examples = 0, 0
 
         for i, (features, targets) in enumerate(data_loader):
             features = features.to(device)
-            targets = targets.float().to(device)
+            targets = targets.to(device)
 
             logits = model(features)
             _, predicted_labels = torch.max(logits, 1)
 
             num_examples += targets.size(0)
             correct_pred += (predicted_labels == targets).sum()
-    log.info(f"{acc_type} Accuracy: {correct_pred.float()/num_examples * 100}")
-    computed_accuracy = correct_pred.float() / num_examples * 100
+    if model_status == "post":
+        log.info(f"{acc_type} Accuracy: {correct_pred/num_examples * 100}")
+    computed_accuracy = correct_pred / num_examples * 100
     return round(computed_accuracy.item(), 2)
 
 
@@ -141,10 +196,81 @@ def compute_confusion_matrix(model, data_loader, device):
     return mat
 
 
+def plot_confusion_matrix(matrix: np.ndarray, classes: tuple):
+    # Set the context for the plot
+    sns.set_context("talk")
+
+    # Create a heatmap
+    plt.figure(figsize=(8, 6))
+    sns.heatmap(
+        matrix,
+        annot=True,
+        fmt="g",
+        cmap="Blues",
+        cbar=False,
+        xticklabels=classes,
+        yticklabels=classes,
+    )
+
+    # Add labels and title (optional)
+    plt.xlabel("Predicted labels")
+    plt.ylabel("True labels")
+    plt.title("Confusion Matrix")
+
+    # Show the plot
+    return plt
+
+
 def plot_accuracy_per_iter(epoch_num: list, accuracy_list: list, name_label: str):
     plt.plot(epoch_num, accuracy_list, label=name_label)
     plt.xlabel("Epoch")
     plt.ylabel("Accuracy")
     plt.title("Accuracy Over Time")
     plt.legend()
-    plt.show()
+    return plt
+
+
+def compute_error_rate(model, data_loader, device, acc_type):
+    with torch.no_grad():
+        correct_pred, num_examples = 0, 0
+
+        for i, (features, targets) in enumerate(data_loader):
+            features = features.to(device)
+            targets = targets.float().to(device)
+
+            logits = model(features)
+            _, predicted_labels = torch.max(logits, 1)
+
+            num_examples += targets.size(0)
+            correct_pred += (predicted_labels == targets).sum()
+
+        accuracy = correct_pred.float() / num_examples * 100
+        error_rate = 100 - accuracy  # Calculate the error rate
+
+    log.info(f"{acc_type} Error Rate: {error_rate}%")
+    return round(error_rate.item(), 2)
+
+
+class EarlyStopping:
+    def __init__(self, patience=10, verbose=False, delta=0):
+        self.patience = patience
+        self.verbose = verbose
+        self.counter = 0
+        self.best_loss = None
+        self.early_stop = False
+        self.delta = delta
+
+    def __call__(self, val_loss, model):
+        if self.best_loss is None:
+            self.best_loss = val_loss
+        elif val_loss > self.best_loss - self.delta:
+            self.counter += 1
+            if self.verbose:
+                log.info(
+                    f"EarlyStopping counter: {self.counter} out of {self.patience}"
+                )
+            if self.counter >= self.patience:
+                self.early_stop = True
+        else:
+            self.best_loss = val_loss
+            self.counter = 0

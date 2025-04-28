@@ -1,4 +1,17 @@
 docs/dev_notes.md
+docs/observations.md
 data/
 results/
 pylintrc
+src/eda/unorganized_stats/
+.vscode/
+results/
+__pycache__
+*.pyc
+archive/
+imagenet-object-localization-challenge.zip
+LOC_sample_submission.csv
+LOC_synset_mapping.txt
+LOC_train_solution.csv
+LOC_val_solution.csv
+ILSVRC/

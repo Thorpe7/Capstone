@@ -34,13 +34,14 @@ class PlainCNN(
         # First conv layer
         self.in_channels = 64
         self.conv1 = nn.Conv2d(image_channels, 64, kernel_size=7, stride=2, padding=3)
+        nn.init.kaiming_normal_(self.conv1.weight, mode="fan_in", nonlinearity="relu")
         self.bn1 = nn.BatchNorm2d(64)
         self.relu = nn.ReLU()
         self.maxpool = nn.MaxPool2d(
             kernel_size=3, stride=2, padding=1
         )  # paper: (x,64,56,56), mine: (x,64,32,32)
 
-        # Call Resnet Blocks
+        # Call CNN Blocks
         self.layer2 = self._make_layers(
             Block, num_layers[0], out_channels=64, stride=1
         )  # 6 layers
@@ -78,12 +79,11 @@ class PlainCNN(
 
     def _make_layers(self, Block, num_residual_blocks, out_channels, stride):
         layers = []
+        layers.append(Block(self.in_channels, out_channels, stride))
+        self.in_channels = out_channels
 
-        for i in range(num_residual_blocks):
-            block_value = Block(self.in_channels, out_channels, stride)
-            if len(layers) == 0:
-                self.in_channels = out_channels
-                stride = 1
+        for _ in range(1, num_residual_blocks):
+            block_value = Block(self.in_channels, out_channels, 1)
             layers.append(block_value)
 
         # Returns unpacked list
@@ -98,3 +98,4 @@ class PlainCNN(
 
 if __name__ == "__main__":
     TestCNN = PlainCNN(CNNBlock, [6, 8, 12, 6], 1, 4)
+    print(TestCNN)
